@@ -1,0 +1,12 @@
+This directory contains images of our luxury fleet vehicles. Please replace these placeholder images with actual high-quality photos of:
+
+1. Mercedes-Benz S-Class (s-class.jpg)
+2. BMW 7 Series (bmw-7.jpg)
+3. Rolls-Royce Phantom (phantom.jpg)
+4. Hero image (hero-car.jpg in the root public directory)
+
+Image specifications:
+- Minimum resolution: 1920x1080
+- Format: JPG
+- Optimization: Web-optimized for fast loading
+- Style: Professional, high-quality photographs showing vehicles at their best angles 
