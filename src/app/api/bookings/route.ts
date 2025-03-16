@@ -24,14 +24,15 @@ export async function POST(request: Request) {
     // Send SMS notification
     try {
       await sendBookingNotification(booking);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to send SMS notification:', error);
       // Continue with the response even if SMS fails
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return NextResponse.json({ 
         success: true, 
         message: 'Booking created successfully, but notification failed to send',
         data: booking,
-        notificationError: error instanceof Error ? error.message : String(error)
+        notificationError: errorMessage
       });
     }
 
