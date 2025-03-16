@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     // Generate a unique booking ID (timestamp + random string)
     booking.bookingId = `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
 
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     console.log('Connected to MongoDB successfully');
 
     const result = await db.collection('bookings').insertOne(booking);
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'active';
 
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     const bookings = await db.collection('bookings')
       .find({ status })
       .sort({ timestamp: -1 })
@@ -86,7 +86,7 @@ export async function PUT(request: Request) {
   try {
     const { bookingId, status } = await request.json();
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     const result = await db.collection('bookings').updateOne(
       { bookingId },
       { $set: { status } }

@@ -9,13 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.11.9",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/nodemailer": "^6.4.17",
     "bcryptjs": "^3.0.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.14.2",
-    "next": "^14.2.24",
+    "next": "^15.2.2",
     "nodemailer": "^6.10.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

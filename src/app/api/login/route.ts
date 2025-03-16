@@ -7,25 +7,32 @@ export async function POST(request: Request) {
 
     // Check if password matches
     if (password === '862486') {
-      const cookieStore = cookies();
-      cookieStore.set('isLoggedIn', 'true', {
+      // Create response with success message
+      const response = NextResponse.json({
+        success: true,
+        message: 'Login successful'
+      });
+
+      // Set cookie in the response
+      response.cookies.set('isLoggedIn', 'true', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 60 * 60 * 24 // 24 hours
       });
 
-      return NextResponse.json({ success: true });
+      return response;
     }
 
-    return NextResponse.json(
-      { error: 'Invalid password' },
-      { status: 401 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Invalid password'
+    }, { status: 401 });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'An error occurred during login' },
-      { status: 500 }
-    );
+    console.error('Login error:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'An unexpected error occurred'
+    }, { status: 500 });
   }
 } 
