@@ -27,7 +27,15 @@ export async function POST(request: Request) {
     } catch (error: unknown) {
       console.error('Failed to send SMS notification:', error);
       // Continue with the response even if SMS fails
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else {
+        errorMessage = String(error);
+      }
+      
       return NextResponse.json({ 
         success: true, 
         message: 'Booking created successfully, but notification failed to send',
