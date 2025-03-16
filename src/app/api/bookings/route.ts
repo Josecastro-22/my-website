@@ -24,14 +24,14 @@ export async function POST(request: Request) {
     // Send SMS notification
     try {
       await sendBookingNotification(booking);
-    } catch (notificationError) {
-      console.error('Failed to send SMS notification:', notificationError);
+    } catch (error) {
+      console.error('Failed to send SMS notification:', error);
       // Continue with the response even if SMS fails
       return NextResponse.json({ 
         success: true, 
         message: 'Booking created successfully, but notification failed to send',
         data: booking,
-        notificationError: notificationError instanceof Error ? notificationError.message : 'Unknown error'
+        notificationError: error instanceof Error ? error.message : String(error)
       });
     }
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     console.error('Error in POST /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'An unexpected error occurred' 
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
     console.error('Error in GET /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
     console.error('Error in PUT /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 } 
