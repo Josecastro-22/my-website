@@ -2,35 +2,36 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/utils/mongodb';
 import { sendBookingNotification } from '@/utils/twilio';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const bookingData = await req.json();
-    console.log('Received booking data:', bookingData);
-
-    const { db } = await connectToDatabase();
+    const booking = await request.json();
     
-    const booking = {
-      ...bookingData,
-      bookingId: Date.now().toString(),
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    };
+    // Add timestamp
+    booking.timestamp = new Date();
+    
+    // Add status
+    booking.status = 'active';
+    
+    // Generate a unique booking ID (timestamp + random string)
+    booking.bookingId = `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
 
-    console.log('Attempting to save booking:', booking);
+    const db = await connectToDatabase();
+    console.log('Connected to MongoDB successfully');
+
     const result = await db.collection('bookings').insertOne(booking);
     console.log('Booking saved successfully:', result);
 
     // Send SMS notification
     try {
       await sendBookingNotification(booking);
-    } catch (error) {
-      console.error('Failed to send SMS notification:', error);
+    } catch (notificationError) {
+      console.error('Failed to send SMS notification:', notificationError);
       // Continue with the response even if SMS fails
       return NextResponse.json({ 
         success: true, 
         message: 'Booking created successfully, but notification failed to send',
         data: booking,
-        notificationError: error.message
+        notificationError: notificationError instanceof Error ? notificationError.message : 'Unknown error'
       });
     }
 
@@ -40,98 +41,64 @@ export async function POST(req: Request) {
       data: booking
     });
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('Error in POST /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to create booking' 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred' 
     }, { status: 500 });
   }
 }
 
 export async function GET(request: Request) {
   try {
-    console.log('Attempting to fetch bookings...');
-    const { db } = await connectToDatabase();
-    
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const status = searchParams.get('status') || 'active';
 
-    let bookings;
-    if (status === 'completed') {
-      bookings = await db.collection('completed-bookings').find({}).sort({ timestamp: -1 }).toArray();
-    } else {
-      bookings = await db.collection('bookings').find({}).sort({ timestamp: -1 }).toArray();
-    }
+    const db = await connectToDatabase();
+    const bookings = await db.collection('bookings')
+      .find({ status })
+      .sort({ timestamp: -1 })
+      .toArray();
 
-    console.log(`Found ${bookings.length} ${status || 'active'} bookings`);
-    return NextResponse.json(bookings);
+    return NextResponse.json({ 
+      success: true, 
+      data: bookings 
+    });
   } catch (error) {
-    console.error('Error fetching bookings:', error);
+    console.error('Error in GET /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to fetch bookings' 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred'
     }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
-    const { db } = await connectToDatabase();
-    const { bookingId, action } = await request.json();
+    const { bookingId, status } = await request.json();
+    
+    const db = await connectToDatabase();
+    const result = await db.collection('bookings').updateOne(
+      { bookingId },
+      { $set: { status } }
+    );
 
-    if (action === 'complete') {
-      // Find the booking
-      const booking = await db.collection('bookings').findOne({ bookingId });
-      
-      if (!booking) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Booking not found' 
-        }, { status: 404 });
-      }
-
-      // Add completion timestamp
-      const completedBooking = {
-        ...booking,
-        completedAt: new Date().toISOString(),
-        status: 'completed'
-      };
-
-      // Move to completed bookings
-      await db.collection('completed-bookings').insertOne(completedBooking);
-      
-      // Delete from active bookings
-      await db.collection('bookings').deleteOne({ bookingId });
-
+    if (result.matchedCount === 0) {
       return NextResponse.json({ 
-        success: true, 
-        data: completedBooking 
-      });
-    } else if (action === 'delete') {
-      const result = await db.collection('bookings').deleteOne({ bookingId });
-      
-      if (result.deletedCount === 0) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Booking not found' 
-        }, { status: 404 });
-      }
-
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Booking deleted successfully' 
-      });
+        success: false, 
+        error: 'Booking not found' 
+      }, { status: 404 });
     }
 
     return NextResponse.json({ 
-      success: false, 
-      error: 'Invalid action' 
-    }, { status: 400 });
+      success: true, 
+      message: 'Booking status updated successfully' 
+    });
   } catch (error) {
-    console.error('Error updating booking:', error);
+    console.error('Error in PUT /api/bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to update booking' 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred'
     }, { status: 500 });
   }
 } 
