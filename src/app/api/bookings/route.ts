@@ -1,74 +1,137 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/utils/mongodb';
+import { sendBookingNotification } from '@/utils/twilio';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    console.log('Attempting to connect to MongoDB...');
-    const client = await clientPromise;
-    console.log('Successfully connected to MongoDB');
+    const bookingData = await req.json();
+    console.log('Received booking data:', bookingData);
+
+    const { db } = await connectToDatabase();
     
-    const data = await request.json();
-    console.log('Received booking data:', data);
-    
-    const db = client.db("luxury-car-service");
-    console.log('Connected to database: luxury-car-service');
-    
-    const bookings = db.collection("bookings");
-    console.log('Accessing bookings collection');
-    
-    // Add timestamp and booking ID
-    const bookingData = {
-      ...data,
-      bookingId: Math.random().toString(36).substring(7),
-      timestamp: new Date().toISOString(),
-      status: 'pending' // Add status field
+    const booking = {
+      ...bookingData,
+      bookingId: Date.now().toString(),
+      status: 'pending',
+      timestamp: new Date().toISOString()
     };
-    
-    // Insert the booking into MongoDB
-    const result = await bookings.insertOne(bookingData);
-    console.log('Successfully inserted booking:', result);
-    
+
+    console.log('Attempting to save booking:', booking);
+    const result = await db.collection('bookings').insertOne(booking);
+    console.log('Booking saved successfully:', result);
+
+    // Send SMS notification
+    try {
+      await sendBookingNotification(booking);
+    } catch (error) {
+      console.error('Failed to send SMS notification:', error);
+      // Continue with the response even if SMS fails
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Booking created successfully, but notification failed to send',
+        data: booking,
+        notificationError: error.message
+      });
+    }
+
     return NextResponse.json({ 
       success: true, 
-      data: bookingData
+      message: 'Booking created successfully',
+      data: booking
     });
   } catch (error) {
-    console.error('Detailed error in POST /api/bookings:', error);
+    console.error('Error creating booking:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Failed to process booking',
-      details: error instanceof Error ? error.stack : undefined
+      error: 'Failed to create booking' 
     }, { status: 500 });
   }
 }
 
-// Add GET endpoint to fetch bookings
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('Attempting to connect to MongoDB...');
-    const client = await clientPromise;
-    console.log('Successfully connected to MongoDB');
+    console.log('Attempting to fetch bookings...');
+    const { db } = await connectToDatabase();
     
-    const db = client.db("luxury-car-service");
-    console.log('Connected to database: luxury-car-service');
-    
-    const bookings = db.collection("bookings");
-    console.log('Accessing bookings collection');
-    
-    // Fetch all bookings, sorted by timestamp (newest first)
-    const result = await bookings.find({}).sort({ timestamp: -1 }).toArray();
-    console.log(`Successfully fetched ${result.length} bookings`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: result 
-    });
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    let bookings;
+    if (status === 'completed') {
+      bookings = await db.collection('completed-bookings').find({}).sort({ timestamp: -1 }).toArray();
+    } else {
+      bookings = await db.collection('bookings').find({}).sort({ timestamp: -1 }).toArray();
+    }
+
+    console.log(`Found ${bookings.length} ${status || 'active'} bookings`);
+    return NextResponse.json(bookings);
   } catch (error) {
-    console.error('Detailed error in GET /api/bookings:', error);
+    console.error('Error fetching bookings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Failed to fetch bookings',
-      details: error instanceof Error ? error.stack : undefined
+      error: 'Failed to fetch bookings' 
+    }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { db } = await connectToDatabase();
+    const { bookingId, action } = await request.json();
+
+    if (action === 'complete') {
+      // Find the booking
+      const booking = await db.collection('bookings').findOne({ bookingId });
+      
+      if (!booking) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Booking not found' 
+        }, { status: 404 });
+      }
+
+      // Add completion timestamp
+      const completedBooking = {
+        ...booking,
+        completedAt: new Date().toISOString(),
+        status: 'completed'
+      };
+
+      // Move to completed bookings
+      await db.collection('completed-bookings').insertOne(completedBooking);
+      
+      // Delete from active bookings
+      await db.collection('bookings').deleteOne({ bookingId });
+
+      return NextResponse.json({ 
+        success: true, 
+        data: completedBooking 
+      });
+    } else if (action === 'delete') {
+      const result = await db.collection('bookings').deleteOne({ bookingId });
+      
+      if (result.deletedCount === 0) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Booking not found' 
+        }, { status: 404 });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Booking deleted successfully' 
+      });
+    }
+
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Invalid action' 
+    }, { status: 400 });
+  } catch (error) {
+    console.error('Error updating booking:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to update booking' 
     }, { status: 500 });
   }
 } 

@@ -293,17 +293,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black">
       {/* Hero Section */}
-      <section className="relative h-screen">
-        <div className="absolute inset-0">
-          <Image
-            src="/hero-car.jpg"
-            alt="Luxury Car"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/50" />
-        </div>
+      <section className="relative h-screen bg-black">
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white px-4">
           <h1 className="text-5xl md:text-7xl font-bold text-center mb-6">
             <span className="text-yellow-400">Premium</span> Luxury Car Service
@@ -358,42 +348,34 @@ export default function Home() {
           <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Our <span className="text-yellow-400">Fleet</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               {
-                name: 'Mercedes-Benz S-Class',
-                image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8',
-                description: 'Ultimate luxury and comfort',
-                features: ['Leather interior', 'Massage seats', 'Premium sound system']
-              },
-              {
-                name: 'BMW 7 Series',
-                image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e',
-                description: 'Sophisticated elegance',
-                features: ['Executive lounge', 'Ambient lighting', 'Advanced driver assistance']
-              },
-              {
-                name: 'Rolls-Royce Phantom',
-                image: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a',
-                description: 'The pinnacle of luxury',
-                features: ['Handcrafted interior', 'Starlight headliner', 'Custom champagne cooler']
-              },
-              {
                 name: 'Ford Expedition',
-                image: 'https://overtake-images.sfo2.digitaloceanspaces.com/2020/Ford/Expedition/20_FRD_EPD_48160_xlt_max_black_appear.jpg',
-                description: 'Premium black SUV for group travel',
-                features: ['Spacious interior', 'Premium leather seats', 'Advanced safety features']
+                description: 'Spacious and comfortable SUV perfect for groups',
+                features: [
+                  'Seats up to 7 passengers',
+                  'Luxury leather interior',
+                  'Climate control',
+                  'Premium sound system',
+                  'Wi-Fi hotspot',
+                  'Privacy partition'
+                ]
               },
+              {
+                name: 'Mercedes Sprinter Group',
+                description: 'Spacious luxury van for larger groups and events',
+                features: [
+                  'Seats up to 14 passengers',
+                  'Executive leather seating',
+                  'Individual climate control',
+                  'Premium entertainment system',
+                  'Wi-Fi connectivity',
+                  'Privacy curtains'
+                ]
+              }
             ].map((car, index) => (
               <div key={index} className="bg-white/5 rounded-lg overflow-hidden shadow-lg border border-white/10 hover:border-yellow-400/50 transition-all">
-                <div className="relative h-48">
-                  <Image
-                    src={car.image}
-                    alt={car.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
                 <div className="p-6">
                   <h3 className="text-2xl font-semibold mb-2 text-white">{car.name}</h3>
                   <p className="text-gray-400 mb-4">{car.description}</p>
@@ -827,7 +809,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-black text-white py-12 border-t border-white/10">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4 text-yellow-400">Luxury Car Service</h3>
               <p className="text-gray-400">
@@ -840,7 +822,7 @@ export default function Home() {
                 <li><Link href="#services" className="text-gray-400 hover:text-yellow-400 transition-colors">Services</Link></li>
                 <li><Link href="#fleet" className="text-gray-400 hover:text-yellow-400 transition-colors">Our Fleet</Link></li>
                 <li><Link href="#booking" className="text-gray-400 hover:text-yellow-400 transition-colors">Book Now</Link></li>
-                <li><Link href="/bookings" className="text-gray-400 hover:text-yellow-400 transition-colors">View Bookings</Link></li>
+                <li><Link href="/login" className="text-gray-400 hover:text-yellow-400 transition-colors">View Bookings</Link></li>
               </ul>
             </div>
             <div>
@@ -850,14 +832,6 @@ export default function Home() {
                 <li>📧 chiquicastro11@gmail.com</li>
                 <li>📍 Coral Springs, Florida</li>
               </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4 text-white">Follow Us</h4>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Instagram</a>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Facebook</a>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Twitter</a>
-              </div>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-white/10 text-center text-gray-400">
