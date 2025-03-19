@@ -2,21 +2,56 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/utils/mongodb';
 import { sendBookingNotification } from '@/utils/twilio';
 
+// Define the expected booking data structure
+interface BookingData {
+  name: string;
+  email: string;
+  phone: string;
+  service: string;
+  date: string;
+  time: string;
+}
+
 export async function POST(request: Request) {
   try {
     console.log('POST /api/bookings: Starting request');
-    const booking = await request.json();
-    console.log('POST /api/bookings: Received booking data:', booking);
     
-    // Add timestamp
-    booking.timestamp = new Date();
-    
-    // Add status
-    booking.status = 'active';
-    
-    // Generate a unique booking ID (timestamp + random string)
-    booking.bookingId = `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
+    // Parse and validate the incoming data
+    let rawData;
+    try {
+      rawData = await request.json();
+      console.log('POST /api/bookings: Received raw data:', rawData);
+    } catch (error) {
+      console.error('POST /api/bookings: Failed to parse request body:', error);
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
 
+    // Validate required fields
+    const requiredFields: (keyof BookingData)[] = ['name', 'email', 'phone', 'service', 'date', 'time'];
+    const missingFields = requiredFields.filter(field => !rawData[field]);
+    
+    if (missingFields.length > 0) {
+      console.error('POST /api/bookings: Missing required fields:', missingFields);
+      return NextResponse.json(
+        { error: `Missing required fields: ${missingFields.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Create the booking object with validated data
+    const booking = {
+      ...rawData,
+      timestamp: new Date(),
+      status: 'active',
+      bookingId: `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase()
+    };
+
+    console.log('POST /api/bookings: Validated booking data:', booking);
+
+    // Connect to MongoDB
     let connection;
     try {
       console.log('POST /api/bookings: Attempting to connect to MongoDB');
@@ -25,58 +60,42 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error('POST /api/bookings: MongoDB connection error:', error);
       return NextResponse.json(
-        { error: 'Database connection failed', details: error instanceof Error ? error.message : String(error) },
+        { error: 'Database connection failed' },
         { status: 503 }
       );
     }
 
-    console.log('Attempting to insert booking...');
-    let result;
+    // Save the booking
     try {
-      result = await connection.db.collection('bookings').insertOne(booking);
+      const result = await connection.db.collection('bookings').insertOne(booking);
       console.log('POST /api/bookings: Booking saved successfully:', result);
     } catch (error) {
       console.error('POST /api/bookings: Error inserting booking:', error);
       return NextResponse.json(
-        { error: 'Failed to save booking', details: error instanceof Error ? error.message : String(error) },
+        { error: 'Failed to save booking' },
         { status: 500 }
       );
     }
 
-    // Send SMS notification
+    // Send notification (but don't fail if it doesn't work)
     try {
-      console.log('POST /api/bookings: Attempting to send SMS notification...');
       await sendBookingNotification(booking);
-      console.log('POST /api/bookings: SMS notification sent successfully');
-    } catch (error: unknown) {
-      console.error('POST /api/bookings: Failed to send SMS notification:', error);
-      // Continue with the response even if SMS fails
-      let errorMessage = 'Unknown error occurred';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else {
-        errorMessage = String(error);
-      }
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Booking created successfully, but notification failed to send',
-        data: booking,
-        notificationError: errorMessage
-      });
+      console.log('POST /api/bookings: Notification sent successfully');
+    } catch (error) {
+      console.error('POST /api/bookings: Failed to send notification:', error);
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    // Return success response
+    return NextResponse.json({
+      success: true,
       message: 'Booking created successfully',
       data: booking
     });
+    
   } catch (error) {
     console.error('POST /api/bookings: Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
