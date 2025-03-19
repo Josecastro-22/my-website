@@ -4,75 +4,74 @@ import { sendBookingNotification } from '@/utils/twilio';
 
 // Define the expected booking data structure
 interface BookingData {
-  name: string;
+  fullName: string;
   email: string;
   phone: string;
   service: string;
-  date: string;
-  time: string;
+  flightDate?: string;
+  flightTime?: string;
+  eventDate?: string;
+  eventTime?: string;
+  pickupTime: string;
+  pickupLocation: {
+    streetAddress: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  dropoffLocation: {
+    streetAddress: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  transferType?: string;
+  flightNumber?: string;
+  passengers: number;
+  serviceHours?: number;
+  additionalDetails?: string;
 }
 
 export async function POST(request: Request) {
   try {
     console.log('POST /api/bookings: Starting request');
     
-    // Log request method and headers
-    console.log('POST /api/bookings: Method:', request.method);
-    console.log('POST /api/bookings: Content-Type:', request.headers.get('content-type'));
+    // Parse the request body
+    const rawData = await request.json();
+    console.log('POST /api/bookings: Received data:', rawData);
+
+    // Validate required fields based on service type
+    const requiredFields = ['fullName', 'email', 'phone', 'service', 'pickupTime', 'pickupLocation'];
     
-    // Get the raw body text first
-    const bodyText = await request.text();
-    console.log('POST /api/bookings: Raw body text:', bodyText);
-    
-    // Try to parse as JSON
-    let rawData;
-    try {
-      rawData = JSON.parse(bodyText);
-      console.log('POST /api/bookings: Parsed data:', rawData);
-    } catch (error) {
-      console.error('POST /api/bookings: JSON parse error:', error);
-      return NextResponse.json({
-        error: 'Invalid JSON data',
-        receivedBody: bodyText
-      }, { status: 400 });
+    // Add service-specific required fields
+    if (rawData.service === 'airport') {
+      requiredFields.push('flightDate', 'flightTime', 'flightNumber', 'transferType');
+    } else if (rawData.service === 'event') {
+      requiredFields.push('eventDate', 'eventTime');
     }
 
-    // Log all received fields and their values
-    const receivedFields = Object.entries(rawData).map(([key, value]) => ({
-      field: key,
-      value: value,
-      type: typeof value
-    }));
-    console.log('POST /api/bookings: Received fields:', receivedFields);
-
-    // Validate required fields
-    const requiredFields: (keyof BookingData)[] = ['name', 'email', 'phone', 'service', 'date', 'time'];
     const missingFields = requiredFields.filter(field => {
-      const value = rawData[field];
-      const isEmpty = value === undefined || value === null || value === '';
-      if (isEmpty) {
-        console.log(`POST /api/bookings: Field ${field} is empty or missing. Value:`, value);
+      if (field === 'pickupLocation') {
+        return !rawData.pickupLocation?.streetAddress;
       }
-      return isEmpty;
+      const value = rawData[field];
+      return value === undefined || value === null || value === '';
     });
     
     if (missingFields.length > 0) {
       return NextResponse.json({
         error: `Missing required fields: ${missingFields.join(', ')}`,
-        receivedFields: receivedFields,
-        missingFields: missingFields
+        receivedFields: Object.keys(rawData)
       }, { status: 400 });
     }
 
-    // Create the booking object with validated data
+    // Create the booking object
     const booking = {
       ...rawData,
       timestamp: new Date(),
       status: 'active',
       bookingId: `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase()
     };
-
-    console.log('POST /api/bookings: Validated booking data:', booking);
 
     // Connect to MongoDB
     let connection;
@@ -82,10 +81,9 @@ export async function POST(request: Request) {
       console.log('POST /api/bookings: Successfully connected to MongoDB');
     } catch (error) {
       console.error('POST /api/bookings: MongoDB connection error:', error);
-      return NextResponse.json(
-        { error: 'Database connection failed' },
-        { status: 503 }
-      );
+      return NextResponse.json({
+        error: 'Database connection failed'
+      }, { status: 503 });
     }
 
     // Save the booking
@@ -94,13 +92,12 @@ export async function POST(request: Request) {
       console.log('POST /api/bookings: Booking saved successfully:', result);
     } catch (error) {
       console.error('POST /api/bookings: Error inserting booking:', error);
-      return NextResponse.json(
-        { error: 'Failed to save booking' },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        error: 'Failed to save booking'
+      }, { status: 500 });
     }
 
-    // Send notification (but don't fail if it doesn't work)
+    // Send notification
     try {
       await sendBookingNotification(booking);
       console.log('POST /api/bookings: Notification sent successfully');
@@ -108,7 +105,6 @@ export async function POST(request: Request) {
       console.error('POST /api/bookings: Failed to send notification:', error);
     }
 
-    // Return success response
     return NextResponse.json({
       success: true,
       message: 'Booking created successfully',
@@ -117,10 +113,9 @@ export async function POST(request: Request) {
     
   } catch (error) {
     console.error('POST /api/bookings: Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: 'Internal server error'
+    }, { status: 500 });
   }
 }
 
