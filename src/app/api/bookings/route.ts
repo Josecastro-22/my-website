@@ -131,15 +131,22 @@ export async function GET(request: Request) {
       console.log('GET /api/bookings: Attempting to connect to MongoDB');
       connection = await connectToDatabase();
       console.log('GET /api/bookings: Successfully connected to MongoDB');
+      
+      // Test the connection
+      await connection.db.command({ ping: 1 });
+      console.log('GET /api/bookings: Database ping successful');
     } catch (error) {
       console.error('GET /api/bookings: MongoDB connection error:', error);
-      return NextResponse.json(
-        { error: 'Database connection failed', details: error instanceof Error ? error.message : String(error) },
-        { status: 503 }
-      );
+      return NextResponse.json({
+        error: 'Database connection failed',
+        details: error instanceof Error ? error.message : String(error)
+      }, { status: 503 });
     }
 
     try {
+      // Log the query we're about to execute
+      console.log('GET /api/bookings: Executing query for status:', status);
+      
       const bookings = await connection.db
         .collection('bookings')
         .find({ status })
@@ -147,20 +154,35 @@ export async function GET(request: Request) {
         .toArray();
       
       console.log(`GET /api/bookings: Successfully fetched ${bookings.length} bookings`);
-      return NextResponse.json({ success: true, data: bookings });
+      
+      // Log the first booking (if any) to verify structure
+      if (bookings.length > 0) {
+        console.log('GET /api/bookings: Sample booking structure:', {
+          id: bookings[0]._id,
+          bookingId: bookings[0].bookingId,
+          status: bookings[0].status,
+          fields: Object.keys(bookings[0])
+        });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        data: bookings,
+        count: bookings.length
+      });
     } catch (error) {
       console.error('GET /api/bookings: Error fetching bookings:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch bookings', details: error instanceof Error ? error.message : String(error) },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        error: 'Failed to fetch bookings',
+        details: error instanceof Error ? error.message : String(error)
+      }, { status: 500 });
     }
   } catch (error) {
     console.error('GET /api/bookings: Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
 
