@@ -16,18 +16,34 @@ if (process.env.NODE_ENV === 'development') {
   };
 
   if (!globalWithMongo._mongoClientPromise) {
+    console.log('Creating new MongoDB client in development mode');
     client = new MongoClient(uri);
     globalWithMongo._mongoClientPromise = client.connect();
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
   // In production mode, it's best to not use a global variable.
+  console.log('Creating new MongoDB client in production mode');
   client = new MongoClient(uri);
   clientPromise = client.connect();
 }
 
 export async function connectToDatabase() {
-  const client = await clientPromise;
-  const db = client.db('luxcarservice');
-  return { db, client };
+  try {
+    console.log('Attempting to connect to MongoDB...');
+    const client = await clientPromise;
+    console.log('MongoDB client connected successfully');
+    
+    const db = client.db('luxcarservice');
+    console.log('Database selected: luxcarservice');
+    
+    // Test the connection
+    await db.command({ ping: 1 });
+    console.log('Database ping successful');
+    
+    return { db, client };
+  } catch (error) {
+    console.error('Error connecting to MongoDB:', error);
+    throw error;
+  }
 } 
