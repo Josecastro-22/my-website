@@ -39,7 +39,8 @@ interface Booking {
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
-  const [view, setView] = useState<'active' | 'completed'>('active');
+  const [deletedBookings, setDeletedBookings] = useState<Booking[]>([]);
+  const [view, setView] = useState<'active' | 'completed' | 'deleted'>('active');
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,12 +50,14 @@ export default function BookingsPage() {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch(`/api/bookings?status=${view === 'completed' ? 'completed' : 'active'}`);
+      const response = await fetch(`/api/bookings?status=${view}`);
       const result = await response.json();
       
       if (result.success && Array.isArray(result.data)) {
         if (view === 'completed') {
           setCompletedBookings(result.data);
+        } else if (view === 'deleted') {
+          setDeletedBookings(result.data);
         } else {
           setBookings(result.data);
         }
@@ -62,6 +65,8 @@ export default function BookingsPage() {
         console.error('Invalid data format received:', result);
         if (view === 'completed') {
           setCompletedBookings([]);
+        } else if (view === 'deleted') {
+          setDeletedBookings([]);
         } else {
           setBookings([]);
         }
@@ -70,6 +75,8 @@ export default function BookingsPage() {
       console.error('Error fetching bookings:', error);
       if (view === 'completed') {
         setCompletedBookings([]);
+      } else if (view === 'deleted') {
+        setDeletedBookings([]);
       } else {
         setBookings([]);
       }
@@ -128,7 +135,11 @@ export default function BookingsPage() {
     );
   };
 
-  const displayBookings = filterBookings(view === 'completed' ? completedBookings : bookings);
+  const displayBookings = filterBookings(
+    view === 'completed' ? completedBookings :
+    view === 'deleted' ? deletedBookings :
+    bookings
+  );
 
   return (
     <main className="min-h-screen bg-black py-20">
@@ -183,6 +194,16 @@ export default function BookingsPage() {
             >
               Completed Bookings
             </button>
+            <button
+              onClick={() => setView('deleted')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                view === 'deleted'
+                  ? 'bg-yellow-400 text-black'
+                  : 'text-white hover:bg-white/10'
+              }`}
+            >
+              Deleted Bookings
+            </button>
           </div>
         </div>
 
@@ -200,7 +221,7 @@ export default function BookingsPage() {
             </div>
             {searchQuery && (
               <p className="mt-2 text-sm text-gray-400">
-                Found {displayBookings.length} {view === 'completed' ? 'completed' : 'active'} bookings
+                Found {displayBookings.length} {view} bookings
               </p>
             )}
           </div>
@@ -212,7 +233,7 @@ export default function BookingsPage() {
           <div className="text-center text-white">
             {searchQuery 
               ? 'No bookings found matching your search criteria.'
-              : `No ${view === 'completed' ? 'completed' : 'active'} bookings found.`}
+              : `No ${view} bookings found.`}
           </div>
         ) : (
           <div className="grid gap-6">
@@ -237,7 +258,9 @@ export default function BookingsPage() {
                       <div>
                         <p className="text-gray-400">Status</p>
                         <p className={`font-medium ${
-                          booking.status === 'completed' ? 'text-green-400' : 'text-yellow-400'
+                          booking.status === 'completed' ? 'text-green-400' : 
+                          booking.status === 'deleted' ? 'text-red-400' : 
+                          'text-yellow-400'
                         }`}>
                           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                         </p>

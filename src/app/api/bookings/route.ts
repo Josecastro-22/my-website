@@ -162,19 +162,36 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { bookingId, status } = await request.json();
+    const { bookingId, action } = await request.json();
     
-    if (!bookingId || !status) {
+    if (!bookingId || !action) {
       return NextResponse.json({
-        error: 'Missing bookingId or status'
+        error: 'Missing bookingId or action'
       }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
     
+    let updateData;
+    if (action === 'complete') {
+      updateData = { 
+        status: 'completed',
+        completedAt: new Date()
+      };
+    } else if (action === 'delete') {
+      updateData = { 
+        status: 'deleted',
+        deletedAt: new Date()
+      };
+    } else {
+      return NextResponse.json({
+        error: 'Invalid action'
+      }, { status: 400 });
+    }
+
     const result = await db.collection('bookings').updateOne(
       { bookingId },
-      { $set: { status } }
+      { $set: updateData }
     );
 
     if (result.matchedCount === 0) {
@@ -185,7 +202,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Booking status updated'
+      message: `Booking ${action}ed successfully`
     });
 
   } catch (error) {
