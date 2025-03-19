@@ -13,6 +13,12 @@ const options = {
   retryWrites: true,
   retryReads: true,
   maxIdleTimeMS: 60000,
+  heartbeatFrequencyMS: 10000,
+  minPoolSize: 5,
+  maxConnecting: 2,
+  compressors: 'zlib',
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
 };
 
 let client: MongoClient;
