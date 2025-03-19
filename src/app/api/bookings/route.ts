@@ -16,11 +16,22 @@ export async function POST(request: Request) {
   try {
     console.log('POST /api/bookings: Starting request');
     
+    // Log the raw request
+    console.log('POST /api/bookings: Request headers:', Object.fromEntries(request.headers.entries()));
+    
     // Parse and validate the incoming data
     let rawData;
     try {
       rawData = await request.json();
-      console.log('POST /api/bookings: Received raw data:', rawData);
+      console.log('POST /api/bookings: Received raw data:', JSON.stringify(rawData, null, 2));
+      console.log('POST /api/bookings: Data types:', {
+        name: typeof rawData.name,
+        email: typeof rawData.email,
+        phone: typeof rawData.phone,
+        service: typeof rawData.service,
+        date: typeof rawData.date,
+        time: typeof rawData.time
+      });
     } catch (error) {
       console.error('POST /api/bookings: Failed to parse request body:', error);
       return NextResponse.json(
@@ -29,14 +40,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // Log all received fields
+    console.log('POST /api/bookings: All received fields:', Object.keys(rawData));
+
     // Validate required fields
     const requiredFields: (keyof BookingData)[] = ['name', 'email', 'phone', 'service', 'date', 'time'];
-    const missingFields = requiredFields.filter(field => !rawData[field]);
+    const missingFields = requiredFields.filter(field => {
+      const value = rawData[field];
+      const isEmpty = value === undefined || value === null || value === '';
+      if (isEmpty) {
+        console.log(`POST /api/bookings: Field ${field} is empty or missing. Value:`, value);
+      }
+      return isEmpty;
+    });
     
     if (missingFields.length > 0) {
       console.error('POST /api/bookings: Missing required fields:', missingFields);
       return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
+        { 
+          error: `Missing required fields: ${missingFields.join(', ')}`,
+          receivedData: rawData
+        },
         { status: 400 }
       );
     }
