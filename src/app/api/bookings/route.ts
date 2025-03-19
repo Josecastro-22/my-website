@@ -19,7 +19,7 @@ interface BookingData {
     state: string;
     zipCode: string;
   };
-  dropoffLocation: {
+  dropoffLocation?: {
     streetAddress: string;
     city: string;
     state: string;
@@ -110,10 +110,32 @@ export async function GET(request: Request) {
       .sort({ timestamp: -1 })
       .toArray();
 
+    // Transform the data to match the expected format
+    const transformedBookings = bookings.map(booking => ({
+      id: booking._id,
+      bookingId: booking.bookingId,
+      name: booking.fullName,
+      email: booking.email,
+      phone: booking.phone,
+      service: booking.service,
+      date: booking.flightDate || booking.eventDate,
+      time: booking.flightTime || booking.eventTime,
+      pickupTime: booking.pickupTime,
+      pickupLocation: booking.pickupLocation,
+      dropoffLocation: booking.dropoffLocation,
+      status: booking.status,
+      timestamp: booking.timestamp,
+      transferType: booking.transferType,
+      flightNumber: booking.flightNumber,
+      passengers: booking.passengers,
+      serviceHours: booking.serviceHours,
+      additionalDetails: booking.additionalDetails
+    }));
+
     return NextResponse.json({
       success: true,
-      data: bookings,
-      count: bookings.length
+      data: transformedBookings,
+      count: transformedBookings.length
     });
 
   } catch (error) {
