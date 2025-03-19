@@ -17,12 +17,30 @@ export async function POST(request: Request) {
     booking.bookingId = `BK${Date.now()}${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
 
     console.log('Attempting to connect to MongoDB...');
-    const { db } = await connectToDatabase();
-    console.log('Connected to MongoDB successfully');
+    let db;
+    try {
+      const connection = await connectToDatabase();
+      db = connection.db;
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection failed. Please try again later.'
+      }, { status: 503 });
+    }
 
     console.log('Attempting to insert booking...');
-    const result = await db.collection('bookings').insertOne(booking);
-    console.log('Booking saved successfully:', result);
+    let result;
+    try {
+      result = await db.collection('bookings').insertOne(booking);
+      console.log('Booking saved successfully:', result);
+    } catch (error) {
+      console.error('Error inserting booking:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to save booking. Please try again.'
+      }, { status: 500 });
+    }
 
     // Send SMS notification
     try {
@@ -69,15 +87,33 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') || 'active';
 
     console.log('Attempting to connect to MongoDB for GET request...');
-    const { db } = await connectToDatabase();
-    console.log('Connected to MongoDB successfully');
+    let db;
+    try {
+      const connection = await connectToDatabase();
+      db = connection.db;
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection failed. Please try again later.'
+      }, { status: 503 });
+    }
 
     console.log('Fetching bookings with status:', status);
-    const bookings = await db.collection('bookings')
-      .find({ status })
-      .sort({ timestamp: -1 })
-      .toArray();
-    console.log('Found bookings:', bookings.length);
+    let bookings;
+    try {
+      bookings = await db.collection('bookings')
+        .find({ status })
+        .sort({ timestamp: -1 })
+        .toArray();
+      console.log('Found bookings:', bookings.length);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch bookings. Please try again.'
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -97,14 +133,32 @@ export async function PUT(request: Request) {
     const { bookingId, status } = await request.json();
     
     console.log('Attempting to connect to MongoDB for PUT request...');
-    const { db } = await connectToDatabase();
-    console.log('Connected to MongoDB successfully');
+    let db;
+    try {
+      const connection = await connectToDatabase();
+      db = connection.db;
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection failed. Please try again later.'
+      }, { status: 503 });
+    }
 
     console.log('Updating booking status:', { bookingId, status });
-    const result = await db.collection('bookings').updateOne(
-      { bookingId },
-      { $set: { status } }
-    );
+    let result;
+    try {
+      result = await db.collection('bookings').updateOne(
+        { bookingId },
+        { $set: { status } }
+      );
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to update booking. Please try again.'
+      }, { status: 500 });
+    }
 
     if (result.matchedCount === 0) {
       console.log('No booking found with ID:', bookingId);

@@ -8,6 +8,13 @@ const uri = process.env.MONGODB_URI;
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
+const options = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  connectTimeoutMS: 10000, // Give up initial connection after 10s
+};
+
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
@@ -17,14 +24,14 @@ if (process.env.NODE_ENV === 'development') {
 
   if (!globalWithMongo._mongoClientPromise) {
     console.log('Creating new MongoDB client in development mode');
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, options);
     globalWithMongo._mongoClientPromise = client.connect();
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
   // In production mode, it's best to not use a global variable.
   console.log('Creating new MongoDB client in production mode');
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
 
