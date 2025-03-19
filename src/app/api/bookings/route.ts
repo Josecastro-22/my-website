@@ -16,32 +16,34 @@ export async function POST(request: Request) {
   try {
     console.log('POST /api/bookings: Starting request');
     
-    // Log the raw request
-    console.log('POST /api/bookings: Request headers:', Object.fromEntries(request.headers.entries()));
+    // Log request method and headers
+    console.log('POST /api/bookings: Method:', request.method);
+    console.log('POST /api/bookings: Content-Type:', request.headers.get('content-type'));
     
-    // Parse and validate the incoming data
+    // Get the raw body text first
+    const bodyText = await request.text();
+    console.log('POST /api/bookings: Raw body text:', bodyText);
+    
+    // Try to parse as JSON
     let rawData;
     try {
-      rawData = await request.json();
-      console.log('POST /api/bookings: Received raw data:', JSON.stringify(rawData, null, 2));
-      console.log('POST /api/bookings: Data types:', {
-        name: typeof rawData.name,
-        email: typeof rawData.email,
-        phone: typeof rawData.phone,
-        service: typeof rawData.service,
-        date: typeof rawData.date,
-        time: typeof rawData.time
-      });
+      rawData = JSON.parse(bodyText);
+      console.log('POST /api/bookings: Parsed data:', rawData);
     } catch (error) {
-      console.error('POST /api/bookings: Failed to parse request body:', error);
-      return NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      );
+      console.error('POST /api/bookings: JSON parse error:', error);
+      return NextResponse.json({
+        error: 'Invalid JSON data',
+        receivedBody: bodyText
+      }, { status: 400 });
     }
 
-    // Log all received fields
-    console.log('POST /api/bookings: All received fields:', Object.keys(rawData));
+    // Log all received fields and their values
+    const receivedFields = Object.entries(rawData).map(([key, value]) => ({
+      field: key,
+      value: value,
+      type: typeof value
+    }));
+    console.log('POST /api/bookings: Received fields:', receivedFields);
 
     // Validate required fields
     const requiredFields: (keyof BookingData)[] = ['name', 'email', 'phone', 'service', 'date', 'time'];
@@ -55,14 +57,11 @@ export async function POST(request: Request) {
     });
     
     if (missingFields.length > 0) {
-      console.error('POST /api/bookings: Missing required fields:', missingFields);
-      return NextResponse.json(
-        { 
-          error: `Missing required fields: ${missingFields.join(', ')}`,
-          receivedData: rawData
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: `Missing required fields: ${missingFields.join(', ')}`,
+        receivedFields: receivedFields,
+        missingFields: missingFields
+      }, { status: 400 });
     }
 
     // Create the booking object with validated data
