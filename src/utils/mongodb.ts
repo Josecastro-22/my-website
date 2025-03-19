@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ReadPreference } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your Mongo URI to .env.local');
@@ -20,7 +20,7 @@ const options = {
   tlsAllowInvalidCertificates: false,
   tlsAllowInvalidHostnames: false,
   directConnection: true,
-  readPreference: 'primary',
+  readPreference: ReadPreference.PRIMARY,
   writeConcern: { w: 'majority' },
 };
 
