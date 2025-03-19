@@ -1,5 +1,6 @@
-import { MongoClient, ReadPreference, WriteConcern } from 'mongodb';
+import { MongoClient } from 'mongodb';
 
+// MongoDB connection configuration with optimized settings for Vercel deployment
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your Mongo URI to .env.local');
 }
@@ -16,13 +17,7 @@ const options = {
   maxIdleTimeMS: 30000,
   heartbeatFrequencyMS: 5000,
   maxConnecting: 1,
-  compressors: 'zlib',
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
-  directConnection: true,
-  readPreference: ReadPreference.PRIMARY,
-  w: 1,
-  wtimeout: 2500
+  directConnection: true
 };
 
 let client: MongoClient;
