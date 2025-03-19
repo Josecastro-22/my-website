@@ -112,37 +112,50 @@ export async function GET(request: Request) {
 
     // Transform the data to match the expected format
     const transformedBookings = bookings.map(booking => ({
-      id: booking._id,
+      id: booking._id.toString(),
       bookingId: booking.bookingId,
       name: booking.fullName,
       email: booking.email,
       phone: booking.phone,
       service: booking.service,
-      date: booking.flightDate || booking.eventDate,
-      time: booking.flightTime || booking.eventTime,
-      pickupTime: booking.pickupTime,
-      pickupLocation: booking.pickupLocation,
-      dropoffLocation: booking.dropoffLocation,
-      status: booking.status,
-      timestamp: booking.timestamp,
-      transferType: booking.transferType,
-      flightNumber: booking.flightNumber,
-      passengers: booking.passengers,
-      serviceHours: booking.serviceHours,
-      additionalDetails: booking.additionalDetails
+      date: booking.flightDate || booking.eventDate || '',
+      time: booking.flightTime || booking.eventTime || '',
+      pickupTime: booking.pickupTime || '',
+      pickupLocation: booking.pickupLocation || {
+        streetAddress: '',
+        city: '',
+        state: '',
+        zipCode: ''
+      },
+      dropoffLocation: booking.dropoffLocation || {
+        streetAddress: '',
+        city: '',
+        state: '',
+        zipCode: ''
+      },
+      status: booking.status || 'active',
+      timestamp: booking.timestamp ? new Date(booking.timestamp).toISOString() : new Date().toISOString(),
+      transferType: booking.transferType || '',
+      flightNumber: booking.flightNumber || '',
+      passengers: booking.passengers || 1,
+      serviceHours: booking.serviceHours || 0,
+      additionalDetails: booking.additionalDetails || ''
     }));
 
     return NextResponse.json({
       success: true,
       data: transformedBookings,
-      count: transformedBookings.length
+      count: transformedBookings.length,
+      status: 'success'
     });
 
   } catch (error) {
     console.error('Failed to fetch bookings:', error);
     return NextResponse.json({
+      success: false,
       error: 'Failed to fetch bookings',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      status: 'error'
     }, { status: 500 });
   }
 }

@@ -50,16 +50,16 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     try {
       const response = await fetch(`/api/bookings?status=${view === 'completed' ? 'completed' : 'active'}`);
-      const data = await response.json();
+      const result = await response.json();
       
-      if (Array.isArray(data)) {
+      if (result.success && Array.isArray(result.data)) {
         if (view === 'completed') {
-          setCompletedBookings(data);
+          setCompletedBookings(result.data);
         } else {
-          setBookings(data);
+          setBookings(result.data);
         }
       } else {
-        console.error('Invalid data format received:', data);
+        console.error('Invalid data format received:', result);
         if (view === 'completed') {
           setCompletedBookings([]);
         } else {
