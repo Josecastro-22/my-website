@@ -59,8 +59,8 @@ export async function connectToDatabase() {
     const client = await clientPromise;
     console.log('Client connection successful');
     
-    const db = client.db('luxcarservice');
-    console.log('Connected to luxcarservice database');
+    const db = client.db('luxury-car-service');
+    console.log('Connected to luxury-car-service database');
     
     // Test the connection
     await db.command({ ping: 1 });
