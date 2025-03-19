@@ -351,8 +351,8 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               {
-                name: 'Ford Expedition',
-                description: 'Spacious and comfortable SUV perfect for groups',
+                name: 'Ford Expedition (Silver)',
+                description: 'Elegant silver Ford Expedition for premium comfort',
                 features: [
                   'Seats up to 7 passengers',
                   'Luxury leather interior',
@@ -363,15 +363,15 @@ export default function Home() {
                 ]
               },
               {
-                name: 'Mercedes Sprinter Group',
-                description: 'Spacious luxury van for larger groups and events',
+                name: 'Ford Expedition (Black)',
+                description: 'Sophisticated black Ford Expedition for executive travel',
                 features: [
-                  'Seats up to 14 passengers',
-                  'Executive leather seating',
-                  'Individual climate control',
-                  'Premium entertainment system',
+                  'Seats up to 7 passengers',
+                  'Premium leather interior',
+                  'Dual-zone climate control',
+                  'High-end audio system',
                   'Wi-Fi connectivity',
-                  'Privacy curtains'
+                  'Privacy partition'
                 ]
               }
             ].map((car, index) => (
