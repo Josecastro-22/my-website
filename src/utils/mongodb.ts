@@ -1,25 +1,28 @@
 import { MongoClient } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
+  throw new Error('Please add your Mongo URI to .env.local');
 }
 
 const uri = process.env.MONGODB_URI;
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
 const options = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-  connectTimeoutMS: 10000, // Give up initial connection after 10s
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
+  retryWrites: true,
+  retryReads: true,
+  maxIdleTimeMS: 60000,
 };
+
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
   let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
+    _mongoClientPromise?: Promise<MongoClient>;
   };
 
   if (!globalWithMongo._mongoClientPromise) {
@@ -41,16 +44,35 @@ export async function connectToDatabase() {
     const client = await clientPromise;
     console.log('MongoDB client connected successfully');
     
-    const db = client.db('luxcarservice');
-    console.log('Database selected: luxcarservice');
-    
-    // Test the connection
-    await db.command({ ping: 1 });
-    console.log('Database ping successful');
-    
-    return { db, client };
+    // Test the connection with a ping
+    try {
+      await client.db().command({ ping: 1 });
+      console.log('MongoDB ping successful');
+    } catch (pingError) {
+      console.error('MongoDB ping failed:', pingError);
+      throw new Error('Database connection test failed');
+    }
+
+    return { client, db: client.db() };
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
+    console.error('MongoDB connection error:', error);
+    // If the error is a connection error, try to reconnect
+    if (error instanceof Error && error.message.includes('connect')) {
+      console.log('Attempting to reconnect to MongoDB...');
+      try {
+        await client.close();
+        const newClient = new MongoClient(uri, options);
+        await newClient.connect();
+        console.log('Successfully reconnected to MongoDB');
+        return { client: newClient, db: newClient.db() };
+      } catch (reconnectError) {
+        console.error('Failed to reconnect to MongoDB:', reconnectError);
+      }
+    }
     throw error;
   }
-} 
+}
+
+// Export a module-scoped MongoClient promise. By doing this in a
+// separate module, the client can be shared across functions.
+export default clientPromise; 
